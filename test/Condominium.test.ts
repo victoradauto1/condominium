@@ -153,8 +153,17 @@ describe("Condominium", function () {
     const { contract, manager, resident } = await deployCondominiumFixture();
     await contract.addTopic('topic 1', 'description 1');
 
-    await expect(contract.removeTopic("topic 1")).to.be.revertedWith("Topic does not exist")
+    await expect(contract.removeTopic("topic 1")).to.be.revertedWith("Only topics in IDLE status can be removed");
   });
 
+  it("Should vote", async function () {
+    const { contract, manager, resident } = await deployCondominiumFixture();
+    await contract.addTopic('topic 1', 'description 1');
 
+    await contract.openVoting("topic 1");
+
+    cont
+   expect(await contract.removeTopic("topic 1")).to.be.revertedWith("Only topics in IDLE status can be removed");
+  });
+  
 });
