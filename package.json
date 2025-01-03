@@ -6,7 +6,8 @@
   "scripts": {
     "compile": "npx hardhat compile",
     "start": "npx hardhat node",
-    "test": "npx hardhat test"
+    "test": "npx hardhat test",
+    "coverage": "npx hardhat coverage"
   },
   "keywords": [],
   "author": "",
