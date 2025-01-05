@@ -10,9 +10,6 @@ interface ICondominium {
 
     function setConsuelor(address resident, bool isEntering) external;
 
-    //TODO: mudar a função set manager
-    function setManager(address newManager) external;
-
     //TODO: mudar a função add topic
     function addTopic(string memory title, string memory description) external;
 

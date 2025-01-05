@@ -1,7 +1,7 @@
-import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import { HardhatUserConfig } from "hardhat/config";
 
-import 'solidity-coverage';
+import "solidity-coverage";
 
 const config: HardhatUserConfig = {
   solidity: "0.8.28",

@@ -33,13 +33,8 @@ contract CondominiumAdapter {
         return implementation.setConsuelor(resident, isEntering);
     }
 
-    //TODO: mudar a função set manager
-    function setManager(address newManager) external{
-        return implementation.setManager(newManager);
-    }
-
     //TODO: mudar a função add topic
-    function addTopic(string memory title, string memory description) external{
+    function addTopic(string memory title, string memory description, Lib.Category) external{
         return implementation.addTopic(title, description);
     }
 
@@ -59,6 +54,7 @@ contract CondominiumAdapter {
         return implementation.vote(title, option);
     }
 
+    //TODO: mudar
     function closeVoting(string memory title) external{
         return implementation.closeVoting(title);
     }

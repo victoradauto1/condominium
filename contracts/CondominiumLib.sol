@@ -17,6 +17,13 @@ library CondominiumLib {
         ABSTENTION
     } //0,1,2,3
 
+     enum Category{
+        DECISION,
+        SPEND,
+        CHANGE_QUOTA,
+        CHANGE_MANAGER
+    } //0,1,2,3
+
     struct Topic {
         string title;
         string description;

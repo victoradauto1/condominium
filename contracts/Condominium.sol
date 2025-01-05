@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {CondominiumLib as Lib} from './CondominiumLib.sol';
-import './ICondominuim.sol';
+import {CondominiumLib as Lib} from "./CondominiumLib.sol";
+import "./ICondominuim.sol";
 
 contract Condominium is ICondominium {
     address public manager; //Ownable
@@ -10,35 +10,32 @@ contract Condominium is ICondominium {
     mapping(address => uint16) public residents;
     mapping(address => bool) public counselors;
 
-
     mapping(bytes32 => Lib.Topic) public topics;
     mapping(bytes32 => Lib.Vote[]) public votes;
 
     constructor() {
         manager = msg.sender;
 
-        for (uint8 i = 0; i <= 2; i++) {
+        for (uint16 i = 0; i <= 2; i++) {
             //blocos
-            for (uint8 j = 0; j <= 5; j++) {
+            for (uint16 j = 0; j <= 5; j++) {
                 //andares
-                for (uint8 k = 1; k <= 5; k++) {
+                for (uint16 k = 1; k <= 5; k++) {
                     //unidades
-                    unchecked {
-                        residences[(i * 1000) + (j * 100) + k] = true;
-                    }
+                    residences[(i * 1000) + (j * 100) + k] = true;
                 }
             }
         }
     }
 
     modifier onlyManager() {
-        require(msg.sender == manager, "Only manager can call this function");
+        require(tx.origin == manager, "Only manager can call this function");
         _;
     }
 
     modifier onlyCouncil() {
         require(
-            msg.sender == manager || counselors[msg.sender],
+            tx.origin == manager || counselors[tx.origin],
             "Only the manager or the council can call this function"
         );
         _;
@@ -46,7 +43,7 @@ contract Condominium is ICondominium {
 
     modifier onlyResident() {
         require(
-            msg.sender == manager || isResident(msg.sender),
+            tx.origin == manager || isResident(tx.origin),
             "Only the manager or residents can call this function"
         );
         _;
@@ -55,6 +52,7 @@ contract Condominium is ICondominium {
     function residenceExists(uint16 residenceId) public view returns (bool) {
         return residences[residenceId];
     }
+
     function isResident(address resident) public view returns (bool) {
         return residents[resident] > 0;
     }
@@ -88,12 +86,9 @@ contract Condominium is ICondominium {
         }
     }
 
-    function setManager(address newManager) external onlyManager {
-        require(newManager != address(0), "The address must be valid");
-        manager = newManager;
-    }
-
-    function getTopic(string memory title) public view returns (Lib.Topic memory) {
+    function getTopic(
+        string memory title
+    ) public view returns (Lib.Topic memory) {
         bytes32 topicId = keccak256(bytes(title));
         return topics[topicId];
     }
@@ -142,7 +137,10 @@ contract Condominium is ICondominium {
         topics[topicId].startDate = block.timestamp;
     }
 
-    function vote(string memory title, Lib.Options option) external onlyResident {
+    function vote(
+        string memory title,
+        Lib.Options option
+    ) external onlyResident {
         require(option != Lib.Options.EMPTY, "The option cannot be EMPTY");
 
         Lib.Topic memory topic = getTopic(title);
@@ -152,7 +150,7 @@ contract Condominium is ICondominium {
             "Only VOTING topics can be voted"
         );
 
-        uint16 resident = residents[msg.sender];
+        uint16 resident = residents[tx.origin];
         bytes32 topicId = keccak256(bytes(title));
 
         Lib.Vote[] storage topicVotes = votes[topicId];
@@ -163,7 +161,7 @@ contract Condominium is ICondominium {
 
         Lib.Vote memory newVote = Lib.Vote({
             residence: resident,
-            resident: msg.sender,
+            resident: tx.origin,
             option: option,
             timestamp: block.timestamp
         });
@@ -203,7 +201,9 @@ contract Condominium is ICondominium {
         topics[topicId].endDate = block.timestamp;
     }
 
-    function numberOfVotes(string memory title) external view returns(uint256){
+    function numberOfVotes(
+        string memory title
+    ) external view returns (uint256) {
         bytes32 topicId = keccak256(bytes(title));
         return votes[topicId].length;
     }
