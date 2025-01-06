@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import './ICondominuim.sol';
+import {CondominiumLib as Lib} from "./CondominiumLib.sol";
 
 contract CondominiumAdapter {
     
@@ -34,8 +35,8 @@ contract CondominiumAdapter {
     }
 
     //TODO: mudar a função add topic
-    function addTopic(string memory title, string memory description, Lib.Category) external{
-        return implementation.addTopic(title, description);
+    function addTopic(string memory title, string memory description, Lib.Category category, uint amount, address responsible) external{
+        return implementation.addTopic(title, description, category, amount, responsible);
     }
 
     //TODO: edit topics

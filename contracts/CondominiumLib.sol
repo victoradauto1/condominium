@@ -19,7 +19,7 @@ library CondominiumLib {
 
      enum Category{
         DECISION,
-        SPEND,
+        SPENT,
         CHANGE_QUOTA,
         CHANGE_MANAGER
     } //0,1,2,3
@@ -31,6 +31,9 @@ library CondominiumLib {
         uint256 createdDate;
         uint256 startDate;
         uint256 endDate;
+        Category category;
+        uint amount;
+        address responsible;
     }
 
     struct Vote {

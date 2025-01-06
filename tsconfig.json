@@ -19,5 +19,8 @@
     "allowSyntheticDefaultImports": true
   },
   "include": ["./scripts", "./test", "./typechain-types"],
-  "files": ["hardhat.config.ts"]
+  "files": ["hardhat.config.ts"],
+  "lib": ["es2020", "dom"],
+  "noImplicitAny": true,
+  "jsx": "react"
 }

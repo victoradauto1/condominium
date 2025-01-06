@@ -11,9 +11,9 @@ interface ICondominium {
     function setConsuelor(address resident, bool isEntering) external;
 
     //TODO: mudar a função add topic
-    function addTopic(string memory title, string memory description) external;
+    function addTopic(string memory title, string memory description, Lib.Category category, uint amount, address responsible) external;
 
-    //TODO: edit topics
+    //TODO: edit topics 
 
     function removeTopic(string memory title) external;
 
