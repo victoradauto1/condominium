@@ -13,7 +13,7 @@ interface ICondominium {
     //TODO: mudar a função add topic
     function addTopic(string memory title, string memory description, Lib.Category category, uint amount, address responsible) external;
 
-    //TODO: edit topics 
+     function editTopic(string memory topicToEdit, string memory description, uint amount, address responsible) external;
 
     function removeTopic(string memory title) external;
 

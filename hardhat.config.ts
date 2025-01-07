@@ -10,6 +10,12 @@ const config: HardhatUserConfig = {
     outDir: "typechain-types",
     target: "ethers-v6",
   },
+  networks: {
+    hardhat: {
+      accounts: {
+        count: 25
+      }
+    }
+  }
 };
-
 export default config;
