@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Condominium } from "../typechain-types";
-import { ethers } from "ethers";
+import { Contract, ethers } from "ethers";
 
 describe("Condominium", function () {
   enum Options {
@@ -16,6 +16,7 @@ describe("Condominium", function () {
     VOTING = 1,
     APPROVED = 2,
     DENIED = 3,
+    SPENT = 4
   } //0,1,2,3
 
   enum Category {
@@ -737,4 +738,108 @@ describe("Condominium", function () {
     await instance.payQuota(1301, {value: ethers.parseEther("0.01")});
     await expect(instance.payQuota(1301, {value: ethers.parseEther("0.01")})).to.be.rejectedWith("You cannot pay twice a month")
   });
+
+  // it("Should transfer", async function () {
+  //   const { contract, manager, accounts } = await deployCondominiumFixture();
+
+  //   const hre = require("hardhat");
+
+  //   await contract.addTopic(
+  //     "topic 1",
+  //     "description 1",
+  //     Category.SPENT,
+  //     100,
+  //     accounts[11].address
+  //   );
+  //   await contract.openVoting("topic 1");
+
+  //   await addResidents(contract, 10, accounts);
+  //   await addVotes(contract, 10 , accounts);
+  //   await contract.closeVoting("topic 1");
+
+  //   const balanceBefore = await hre.ethers.provider.getBalance(contract.address);
+  //   const balanceBeforeServiceProvider = await hre.ethers.provider.getBalance(accounts[11]);
+
+  //   await contract.transfer('topic 1', 100);
+
+  //   const balanceAfter = await hre.ethers.provider.getBalance(contract.address);
+  //   const balanceBeforeAfterProvider = await hre.ethers.provider.getBalance(accounts[11]);
+  //   const topic =  await contract.getTopic("topic 1");
+
+  //   expect(balanceAfter).to.equal(balanceBefore - 100n);
+  //   expect(balanceBeforeAfterProvider - balanceBeforeServiceProvider ).to.equal(100n);
+  //   expect(topic.status).to.equal(Status.SPENT);
+
+  // });
+
+  it("Should NOT transfer (permission)", async function () {
+    const { contract, manager, accounts } = await deployCondominiumFixture();
+    
+    const instance = await contract.connect(accounts[3]);
+
+    await expect(instance.transfer('topic 1', 100)).to.be.rejectedWith("Only manager can call this function");
+  });
+
+  it("Should NOT transfer (insufficient founds)", async function () {
+    const { contract, manager, accounts } = await deployCondominiumFixture();
+    
+    await expect(contract.transfer('topic 1', 100)).to.be.rejectedWith("Insufficient founds");
+  });
+
+  it("Should NOT transfer (category)", async function () {
+      const { contract, manager, accounts } = await deployCondominiumFixture();
+  
+      await contract.addTopic(
+        "topic 1",
+        "description 1",
+        Category.DECISION,
+        0,
+        manager
+      );
+      await contract.openVoting("topic 1");
+  
+      await addResidents(contract, 10, accounts);
+      await addVotes(contract, 10 , accounts);
+      await contract.closeVoting("topic 1");
+    
+      await expect( contract.transfer('topic 1', 100)).to.be.rejectedWith("Only APPROVED SPENT topics can be used for transfers")
+  });
+
+  it("Should NOT transfer (status)", async function () {
+    const { contract, manager, accounts } = await deployCondominiumFixture();
+
+    await contract.addTopic(
+      "topic 1",
+      "description 1",
+      Category.SPENT,
+      100,
+      accounts[11].address
+    ); 
+    await contract.openVoting("topic 1");
+
+    await addResidents(contract, 10, accounts);
+    await addVotes(contract, 10 , accounts, false);
+    await contract.closeVoting("topic 1");
+    await expect( contract.transfer('topic 1', 100)).to.be.rejectedWith("Only APPROVED SPENT topics can be used for transfers")
+});
+
+it("Should NOT transfer(amount)", async function () {
+    const { contract, manager, accounts } = await deployCondominiumFixture();
+
+    await contract.addTopic(
+      "topic 1",
+      "description 1",
+      Category.SPENT,
+      100,
+      accounts[11].address
+    );
+    await contract.openVoting("topic 1");
+
+    await addResidents(contract, 10, accounts);
+    await addVotes(contract, 10 , accounts);
+    await contract.closeVoting("topic 1");
+
+    await expect(contract.transfer('topic 1', 200)).to.be.rejectedWith("The amount must be less or equal the APPROVED topic");
+  });
+
 });
