@@ -7,20 +7,10 @@
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "*": ["node_modules/*", "src/types/*"]
-    },
-    "typeRoots": ["./node_modules/@types", "./types"],
-    "outDir": "dist",
-    "declaration": true,
-    "sourceMap": true,
     "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "outDir": "dist"
   },
-  "include": ["./scripts", "./test", "./typechain-types"],
-  "files": ["hardhat.config.ts"],
-  "lib": ["es2020", "dom"],
-  "noImplicitAny": true,
-  "jsx": "react"
+  "include": ["./scripts", "./test"],
+  "files": ["hardhat.config.ts"]
 }

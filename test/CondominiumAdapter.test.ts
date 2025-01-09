@@ -1,6 +1,8 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
-import { CondominiumAdapter } from "../dist/typechain-types";
+import { CondominiumAdapter } from "../typechain-types";
+import { matchesGlob } from "path";
+import { ethers } from "ethers";
 
 describe("CondominiumAdapter", function () {
   enum Options {
@@ -15,6 +17,7 @@ describe("CondominiumAdapter", function () {
     VOTING = 1,
     APPROVED = 2,
     DENIED = 3,
+    SPENT = 4
   } //0,1,2,3
 
   enum Category {
@@ -35,6 +38,9 @@ describe("CondominiumAdapter", function () {
         100 * Math.ceil(i / 5) +
         (i - 5 * Math.floor((i - 1) / 5));
       await adapter.addResident(accounts[i].address, residenceId);
+      
+      const instance = adapter.connect(accounts[i]);
+      await instance.payQuota(residenceId, {value: ethers.parseEther("0.01")})
     }
   }
 
@@ -139,7 +145,7 @@ describe("CondominiumAdapter", function () {
     expect(await contract.counselors(accounts[1].address)).to.equal(true);
   });
 
-  it("Should  NOT set counseler", async function () {
+  it("Should NOT set counseler", async function () {
     const { adapter, manager, accounts } = await deployAdapterFixture();
     const { contract, contractAddress } = await deployImplementationFixture();
 
@@ -162,6 +168,46 @@ describe("CondominiumAdapter", function () {
       manager.address
     );
     expect(await contract.topicExists("topic 1")).to.equal(true);
+  });
+
+  it("Should edit topic", async function () {
+    const { adapter, manager, accounts } = await deployAdapterFixture();
+    const { contract, contractAddress } = await deployImplementationFixture();
+
+    await adapter.upgrade(contractAddress);
+
+    await adapter.addTopic(
+      "topic 1",
+      "description 1",
+      Category.DECISION,
+      0,
+      manager.address
+    );
+
+    await adapter.editTopic(
+      "topic 1",
+      "New description 1",
+      0,
+      manager.address
+    );
+
+    const topic = await contract.getTopic('topic 1');
+    expect(topic.description).to.equal("New description 1")
+  
+  });
+
+  it("Should NOT edit topic (upgrade)", async function () {
+    const { adapter, manager, accounts } = await deployAdapterFixture();
+    const { contract, contractAddress } = await deployImplementationFixture();
+
+    await expect(
+      adapter.editTopic(
+        "topic 1",
+        "description 1",
+        0,
+        manager.address
+      )
+    ).to.be.rejectedWith("You must upgrad first");
   });
 
   it("Should NOT add topic (upgrade)", async function () {
@@ -224,6 +270,7 @@ describe("CondominiumAdapter", function () {
     expect(topic.status).to.equal(Status.VOTING);
   });
 
+  
   it("Should NOT open voting(upgrade)", async function () {
     const { adapter, manager, accounts } = await deployAdapterFixture();
     const { contract, contractAddress } = await deployImplementationFixture();
@@ -250,7 +297,7 @@ describe("CondominiumAdapter", function () {
     await adapter.openVoting("topic 1");
 
     const instance = adapter.connect(accounts[1]);
-
+    await instance.payQuota(1301, {value: ethers.parseEther("0.01")})
     await instance.vote("topic 1", Options.NO);
 
     expect(await contract.numberOfVotes("topic 1")).to.equal(1);
@@ -289,11 +336,56 @@ describe("CondominiumAdapter", function () {
 
     expect(topic.status).to.equal(Status.APPROVED);
   });
+
   it("Should NOT close voting(upgrade)", async function () {
     const { adapter, manager, accounts } = await deployAdapterFixture();
     const { contract, contractAddress } = await deployImplementationFixture();
 
     await expect(adapter.closeVoting("topic 1")).to.be.rejectedWith(
+      "You must upgrad first"
+    );
+  });
+
+  it("Should NOT pay quota(upgrade)", async function () {
+    const { adapter, manager, accounts } = await deployAdapterFixture();
+    const { contract, contractAddress } = await deployImplementationFixture();
+
+    await expect(adapter.payQuota(1101, {value: ethers.parseEther("0.01")})).to.be.rejectedWith(
+      "You must upgrad first"
+    );
+  });
+
+  it("Should transfer", async function () {
+    const { adapter, manager, accounts } = await deployAdapterFixture();
+    const { contract, contractAddress } = await deployImplementationFixture();
+
+    await adapter.upgrade(contractAddress);
+
+    await adapter.addTopic(
+      "topic 1",
+      "description 1",
+      Category.SPENT,
+      100,
+      accounts[11].address
+    );
+    await adapter.openVoting("topic 1");
+
+    await addResidents(adapter, 10, accounts);
+    await addVotes(adapter, 10 , accounts);
+    const topic = await contract.getTopic('topic');
+    await adapter.closeVoting("topic 1");
+
+    await adapter.tranfer('topic 1', 100);
+
+    console.log(topic.status)
+    expect(topic.status).to.equal(Status.SPENT);
+  });
+
+  it("Should NOT tranfer(upgrade)", async function () {
+    const { adapter, manager, accounts } = await deployAdapterFixture();
+    const { contract, contractAddress } = await deployImplementationFixture();
+
+    await expect(adapter.transfer("topic 1", {value: ethers.parseEther("0.01")})).to.be.rejectedWith(
       "You must upgrad first"
     );
   });

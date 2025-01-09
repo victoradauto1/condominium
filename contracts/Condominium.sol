@@ -12,6 +12,8 @@ contract Condominium is ICondominium {
     mapping(address => uint16) public residents;
     mapping(address => bool) public counselors;
 
+    mapping(uint16 => uint) public payments; //unidade (residencial) => timestamp último pagamento
+
     mapping(bytes32 => Lib.Topic) public topics;
     mapping(bytes32 => Lib.Vote[]) public votes;
 
@@ -48,10 +50,11 @@ contract Condominium is ICondominium {
             tx.origin == manager || isResident(tx.origin),
             "Only the manager or residents can call this function"
         );
+        require(tx.origin == manager || block.timestamp < payments[residents[tx.origin]] + (30*24*60*60), "The resident must be defaulter");
         _;
     }
 
-    modifier validAddress(address addr){
+    modifier validAddress(address addr) {
         require(addr != address(0), "Invalid address");
         _;
     }
@@ -67,7 +70,7 @@ contract Condominium is ICondominium {
     function addResident(
         address resident,
         uint16 residenceId
-    ) external onlyCouncil validAddress(resident){
+    ) external onlyCouncil validAddress(resident) {
         require(residenceExists(residenceId), "Residence does not exist");
         residents[resident] = residenceId;
     }
@@ -108,8 +111,12 @@ contract Condominium is ICondominium {
         address responsible
     ) external onlyResident {
         require(!topicExists(title), "Topic already exists");
-        if(amount > 0){
-            require(category == Lib.Category.CHANGE_QUOTA || category == Lib.Category.SPENT , "Wrong category");
+        if (amount > 0) {
+            require(
+                category == Lib.Category.CHANGE_QUOTA ||
+                    category == Lib.Category.SPENT,
+                "Wrong category"
+            );
         }
 
         Lib.Topic memory newTopic = Lib.Topic({
@@ -119,9 +126,9 @@ contract Condominium is ICondominium {
             startDate: 0,
             endDate: 0,
             status: Lib.Status.IDLE,
-            category : category,
-            amount:amount,
-            responsible: responsible != address(0)? responsible : tx.origin
+            category: category,
+            amount: amount,
+            responsible: responsible != address(0) ? responsible : tx.origin
         });
 
         topics[keccak256(bytes(title))] = newTopic;
@@ -137,20 +144,27 @@ contract Condominium is ICondominium {
         delete topics[keccak256(bytes(title))];
     }
 
-    function editTopic(string memory topicToEdit, string memory description, uint amount, address responsible) external onlyManager{
+    function editTopic(
+        string memory topicToEdit,
+        string memory description,
+        uint amount,
+        address responsible
+    ) external onlyManager {
         Lib.Topic memory topic = getTopic(topicToEdit);
-        require(topic.createdDate > 0 , "This topic does not exists");
-        require(topic.status == Lib.Status.IDLE, "Only IDLE topics can be edited");
+        require(topic.createdDate > 0, "This topic does not exists");
+        require(
+            topic.status == Lib.Status.IDLE,
+            "Only IDLE topics can be edited"
+        );
 
         bytes32 topicId = keccak256(bytes(topicToEdit));
 
-        if(bytes(description).length > 0)
+        if (bytes(description).length > 0)
             topics[topicId].description = description;
 
-        if(amount >= 0)
-            topics[topicId].amount = amount;
+        if (amount > 0) topics[topicId].amount = amount;
 
-        if(responsible != address(0))
+        if (responsible != address(0))
             topics[topicId].responsible = responsible;
     }
 
@@ -185,10 +199,10 @@ contract Condominium is ICondominium {
 
         Lib.Vote[] storage topicVotes = votes[topicId];
         for (uint8 i = 0; i < topicVotes.length; i++) {
-              require(
-            topicVotes[i].resident != msg.sender,
-            "A residence should vote only once"
-        );
+            require(
+                topicVotes[i].resident != msg.sender,
+                "A residence should vote only once"
+            );
         }
 
         Lib.Vote memory newVote = Lib.Vote({
@@ -210,13 +224,15 @@ contract Condominium is ICondominium {
         );
 
         uint8 minimumVotes = 5;
-        if (topic.category == Lib.Category.SPENT)
-             minimumVotes = 10;
-             else if(topic.category == Lib.Category.CHANGE_MANAGER)
-             minimumVotes = 15;
-             else if(topic.category == Lib.Category.CHANGE_QUOTA) minimumVotes = 20;
-           
-        require(numberOfVotes(title) >= minimumVotes, "You cannot finish a voting without the minimum votes");
+        if (topic.category == Lib.Category.SPENT) minimumVotes = 10;
+        else if (topic.category == Lib.Category.CHANGE_MANAGER)
+            minimumVotes = 15;
+        else if (topic.category == Lib.Category.CHANGE_QUOTA) minimumVotes = 20;
+
+        require(
+            numberOfVotes(title) >= minimumVotes,
+            "You cannot finish a voting without the minimum votes"
+        );
 
         uint8 approved = 0;
         uint8 denied = 0;
@@ -234,24 +250,45 @@ contract Condominium is ICondominium {
             }
         }
 
-        Lib.Status newStatus = approved > denied ? Lib.Status.APPROVED : Lib.Status.DENIED;
+        Lib.Status newStatus = approved > denied
+            ? Lib.Status.APPROVED
+            : Lib.Status.DENIED;
         topics[topicId].status = newStatus;
         topics[topicId].endDate = block.timestamp;
 
-        if(newStatus == Lib.Status.APPROVED){
-            if(topic.category == Lib.Category.CHANGE_QUOTA){
+        if (newStatus == Lib.Status.APPROVED) {
+            if (topic.category == Lib.Category.CHANGE_QUOTA) {
                 monthlyQuota = topic.amount;
-            }
-            else if (topic.category == Lib.Category.CHANGE_MANAGER){
+            } else if (topic.category == Lib.Category.CHANGE_MANAGER) {
                 manager = topic.responsible;
             }
         }
     }
 
-    function numberOfVotes(
-        string memory title
-    ) public view returns (uint256) {
+    function numberOfVotes(string memory title) public view returns (uint256) {
         bytes32 topicId = keccak256(bytes(title));
         return votes[topicId].length;
     }
+
+    function payQuota(uint16 residenceId) external payable{
+        require(residenceExists(residenceId), "The residence does not exists");
+        require(msg.value >= monthlyQuota, "Wrong value");
+        require(block.timestamp > payments[residenceId] + (30*24*60*60),"You cannot pay twice a month" );
+        payments[residenceId] = block.timestamp;
+    }
+
+     function tranfer(string memory topicTitle, uint amount) external onlyManager{
+        require(address(this).balance >= amount, "Insufficient founds");
+
+        Lib.Topic memory topic = getTopic(topicTitle);
+        require(topic.status == Lib.Status.APPROVED && topic.category == Lib.Category.SPENT, "Only APPROVED SPENT topics can be used for tranfers");
+
+        require(topic.amount >= amount, "The amount must be less or equal the APPROVED topic");
+
+        payable(topic.responsible).transfer(amount);
+
+        bytes32 topicId = keccak256(bytes(topicTitle));
+        topics[topicId].status = Lib.Status.SPENT;
+     }
+
 }
