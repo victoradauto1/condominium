@@ -270,7 +270,7 @@ describe("Condominium", function () {
     ).to.be.rejectedWith("Topic already exists");
   });
 
-  it("Should edit topic", async function () {
+  it("Should edit topic(filled description)", async function () {
     const { contract, manager, accounts } = await deployCondominiumFixture();
     await contract.addTopic(
       "topic 1",
@@ -288,6 +288,46 @@ describe("Condominium", function () {
 
     const topic = await contract.getTopic('topic 1');
     expect(topic.description ===  "New Description 1").to.equal(true);
+  });
+
+  it("Should edit topic(empty description)", async function () {
+    const { contract, manager, accounts } = await deployCondominiumFixture();
+    await contract.addTopic(
+      "topic 1",
+      "description 1",
+      Category.DECISION,
+      0,
+      manager.address
+    );
+    await contract.editTopic(
+      "topic 1",
+      "",
+      0,
+      manager.address
+    );
+
+    const topic = await contract.getTopic('topic 1');
+    expect(topic.description).to.equal("description 1");
+  });
+
+  it("Should edit topic(amount)", async function () {
+    const { contract, manager, accounts } = await deployCondominiumFixture();
+    await contract.addTopic(
+      "topic 1",
+      "description 1",
+      Category.SPENT,
+      30,
+      manager.address
+    );
+    await contract.editTopic(
+      "topic 1",
+      "description 1",
+      40,
+      manager.address
+    );
+
+    const topic = await contract.getTopic('topic 1');
+    expect(topic.amount ===  40n).to.equal(true);
   });
 
   it("Should NOT edit topic(permission)", async function () {

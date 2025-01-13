@@ -7,7 +7,9 @@
     "compile": "npx hardhat compile",
     "start": "npx hardhat node",
     "test": "npx hardhat test",
-    "coverage": "npx hardhat coverage"
+    "coverage": "npx hardhat coverage",
+    "ignition": "npx hardhat ignition deploy ignition/modules/Condominium.ts --network bsctest",
+    "deploy":"npx hardhat run scripts/deploy.ts --network sepolia"
   },
   "keywords": [],
   "author": "",
@@ -29,5 +31,8 @@
     "solidity-coverage": "^0.8.14",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
   }
 }
