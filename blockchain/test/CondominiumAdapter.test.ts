@@ -467,4 +467,44 @@ describe("CondominiumAdapter", function () {
       "You must upgrad first"
     );
   });
+
+  it("Should get manager", async function () {
+    const { adapter, manager, accounts } = await deployAdapterFixture();
+    const { contract, contractAddress } = await deployImplementationFixture();
+
+    await adapter.upgrade(contractAddress);
+
+    const managerAdapter = await adapter.getManager();
+    expect(manager).to.equal(manager);
+  });
+
+  it("Should NOT get manager(upgrade)", async function () {
+    const { adapter, manager, accounts } = await deployAdapterFixture();
+    const { contract, contractAddress } = await deployImplementationFixture();
+
+    await expect(adapter.getManager()).to.be.rejectedWith(
+      "You must upgrad first"
+    );
+  });
+
+  it("Should get quota", async function () {
+    const { adapter, manager, accounts } = await deployAdapterFixture();
+    const { contract, contractAddress } = await deployImplementationFixture();
+
+    const {utils} =
+
+    await adapter.upgrade(contractAddress);
+
+    const quota = await adapter.getQuota();
+    expect(quota).to.equal(ethers.parseEther("0.01"));
+  });
+
+  it("Should NOT get quota(upgrade)", async function () {
+    const { adapter, manager, accounts } = await deployAdapterFixture();
+    const { contract, contractAddress } = await deployImplementationFixture();
+
+    await expect(adapter.getQuota()).to.be.rejectedWith(
+      "You must upgrad first"
+    );
+  });
 });
