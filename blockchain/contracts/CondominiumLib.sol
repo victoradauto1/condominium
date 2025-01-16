@@ -57,4 +57,21 @@ library CondominiumLib {
         uint amount;
         string topic;
     }
+
+    struct Resident{
+        address wallet;
+        uint16 residence;
+        bool isCounselor;
+        bool manager;
+    }
+
+    struct ResidentsPage{
+        Resident [] residents;
+        uint total;
+    }
+
+    struct TopicsPage{
+        Topic [] topics;
+        uint total;
+    }
 } 
