@@ -50,4 +50,6 @@ interface ICondominium {
     function getTopic(string memory title) external view returns(Lib.Topic memory);
 
     function getTopics(uint page, uint pageSize) external view returns(Lib.TopicsPage memory);
+
+    function getVotes(string memory topicTitle) external view returns(Lib.Vote[] memory);
 }

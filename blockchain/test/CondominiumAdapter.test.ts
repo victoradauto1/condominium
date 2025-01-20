@@ -143,7 +143,9 @@ describe("CondominiumAdapter", function () {
     await adapter.addResident(accounts[1].address, 1301);
     await adapter.setConsuelor(accounts[1].address, true);
 
-    expect(await contract.counselors(accounts[1].address)).to.equal(true);
+    const resident =  await adapter.getResident(accounts[1].address);
+
+    expect(resident.isCounselor).to.equal(true);
   });
 
   it("Should NOT set counseler", async function () {
