@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Condominium } from "../typechain-types";
-import { Contract, ethers } from "ethers";
+import { Contract, ethers, ZeroAddress } from "ethers";
 
 describe("Condominium", function () {
   enum Options {
@@ -199,6 +199,7 @@ describe("Condominium", function () {
   it("Should remove resident", async function () {
     const { contract, accounts } = await deployCondominiumFixture();
     await contract.addResident(accounts[1].address, 2102);
+    await contract.addResident(accounts[2].address, 2105);
     await contract.removeResident(accounts[1].address);
     expect(await contract.isResident(accounts[1].address)).to.equal(false);
   });
@@ -247,11 +248,34 @@ describe("Condominium", function () {
   it("Should remove Counselor", async function () {
     const { contract, accounts, manager } = await deployCondominiumFixture();
     await contract.addResident(accounts[1].address, 2102);
+    await contract.addResident(accounts[2].address, 2104);
     await contract.setConsuelor(accounts[1].address, true);
+    await contract.setConsuelor(accounts[2].address, true);
     await contract.setConsuelor(accounts[1].address, false);
     const resident = await contract.getResident(accounts[1].address);
 
     expect(resident.isCounselor).to.equal(false);
+  });
+
+  it("Should NOT remove Counselor(permission)", async function () {
+    const { contract, accounts, manager } = await deployCondominiumFixture();
+    await contract.addResident(accounts[1].address, 2102);
+    await contract.setConsuelor(accounts[1].address, true);
+
+    const instance  = contract.connect(accounts[3]);
+    await expect(instance.setConsuelor(accounts[1].address, false)).to.be.rejectedWith("Only manager can call this function");
+  });
+
+  it("Should NOT remove Counselor(not found)", async function () {
+    const { contract, accounts, manager } = await deployCondominiumFixture();
+    await expect(contract.setConsuelor(accounts[3], false)).to.be.rejectedWith("Counselor not found");
+  });
+
+  it("Should NOT remove Counselor(invalid address)", async function () {
+    const { contract, accounts, manager } = await deployCondominiumFixture();
+    await contract.addResident(accounts[1].address, 2102);
+    await contract.setConsuelor(accounts[1].address, true);
+    await expect(contract.setConsuelor(ZeroAddress, false)).to.be.rejectedWith("Invalid address");
   });
 
   it("Should NOT add Counselor (permission)", async function () {
@@ -303,31 +327,52 @@ describe("Condominium", function () {
     expect(await contract.monthlyQuota()).to.equal(value);
   });
 
+  it("Should get topic", async function () {
+    const { contract, manager, accounts } = await deployCondominiumFixture();
+    await contract.addTopic(
+      "topic 1",
+      "description 1",
+      Category.DECISION,
+      0,
+      manager.address
+    );
+
+    await contract.addTopic(
+      "topic 2",
+      "description 2",
+      Category.DECISION,
+      0,
+      manager.address
+    );
+    const topic = await contract.getTopic("topic 1");
+    expect(topic.title).to.equal("topic 1");
+  });
+
   it("Should get topics page", async function () {
     const { contract, manager, accounts } = await deployCondominiumFixture();
-
+    
     // Adiciona 15 tópicos para testar paginação
     for (let i = 1; i <= 15; i++) {
-      await contract.addTopic(
-        `topic ${i}`,
-        `description ${i}`,
-        Category.DECISION,
-        0,
-        manager.address
-      );
+        await contract.addTopic(
+            `topic ${i}`,
+            `description ${i}`,
+            Category.DECISION,
+            0,
+            manager.address
+        );
     }
-
+    
     // Testa primeira página com 10 tópicos
     const page1 = await contract.getTopics(1, 10);
     expect(page1.topics.length).to.equal(10);
-    expect(page1.total).to.not.equal(0);
-
+    expect(page1.total).to.equal(15); // Agora verifica o número total correto de tópicos
+    
     // Testa segunda página com 5 tópicos restantes
     const page2 = await contract.getTopics(2, 10);
     expect(page2.topics.length).to.equal(10);
-    expect(page2.topics.filter((t: Topic) => t.title !== "").length).to.equal(5);
-  });
-
+    expect(page2.topics.filter((t: Topic)=> t.title !== "").length).to.equal(5);
+    expect(page2.total).to.equal(15);
+});
   it("Should get empty topics page when no topics", async function () {
     const { contract } = await deployCondominiumFixture();
 
@@ -506,11 +551,18 @@ describe("Condominium", function () {
     expect(topic.description === "description 1").to.equal(true);
   });
 
-  it("Should remove topic", async function () {
+  it("Should remove topic (first)", async function () {
     const { contract, manager, accounts } = await deployCondominiumFixture();
     await contract.addTopic(
       "topic 1",
       "description 1",
+      Category.DECISION,
+      0,
+      manager.address
+    );
+    await contract.addTopic(
+      "topic 2",
+      "description 2",
       Category.DECISION,
       0,
       manager.address

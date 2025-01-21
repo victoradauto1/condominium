@@ -350,7 +350,7 @@ contract Condominium is ICondominium {
             result[index++] = topics[i];
         }
 
-        return Lib.TopicsPage({topics: result, total: residents.length});
+        return Lib.TopicsPage({topics: result, total: topics.length});
     }
 
     // Voting functions
