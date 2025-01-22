@@ -1,7 +1,8 @@
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import { SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Condominium } from "../typechain-types";
-import { Contract, ethers, ZeroAddress } from "ethers";
+import { ethers, ZeroAddress } from "ethers";
+import {time} from "@nomicfoundation/hardhat-network-helpers";
 
 describe("Condominium", function () {
   enum Options {
@@ -59,14 +60,16 @@ describe("Condominium", function () {
     count: number,
     accounts: SignerWithAddress[]
   ) {
+
+    const skip = count < 20? 0: 1;
     for (let i = 1; i <= count; i++) {
       const residenceId =
         1000 * Math.ceil(i / 25) +
         100 * Math.ceil(i / 5) +
         (i - 5 * Math.floor((i - 1) / 5));
-      await contract.addResident(accounts[i].address, residenceId);
+      await contract.addResident(accounts[i - skip].address, residenceId);
 
-      const instance = contract.connect(accounts[i]);
+      const instance = contract.connect(accounts[i - skip]);
       await instance.payQuota(residenceId, {
         value: ethers.parseEther("0.01"),
       });
@@ -79,8 +82,9 @@ describe("Condominium", function () {
     accounts: SignerWithAddress[],
     shouldApproved: boolean = true
   ) {
+    const skip = count < 20? 0: 1;
     for (let i = 1; i <= count; i++) {
-      const instance = contract.connect(accounts[i]);
+      const instance = contract.connect(accounts[i - skip]);
       await instance.vote("topic 1", shouldApproved ? Options.YES : Options.NO);
     }
   }
@@ -245,7 +249,7 @@ describe("Condominium", function () {
     ).to.be.rejectedWith("Invalid address");
   });
 
-  it("Should remove Counselor", async function () {
+  it("Should remove Counselor (first)", async function () {
     const { contract, accounts, manager } = await deployCondominiumFixture();
     await contract.addResident(accounts[1].address, 2102);
     await contract.addResident(accounts[2].address, 2104);
@@ -256,6 +260,47 @@ describe("Condominium", function () {
 
     expect(resident.isCounselor).to.equal(false);
   });
+
+  it("Should remove Counselor (not last)", async function () {
+    const { contract, accounts, manager } = await deployCondominiumFixture();
+    
+    // Add residents
+    await contract.addResident(accounts[1].address, 2102);
+    await contract.addResident(accounts[2].address, 2104);
+    await contract.addResident(accounts[3].address, 2105);
+    await contract.addResident(accounts[4].address, 1104);
+    
+    // Add counselors
+    await contract.setConsuelor(accounts[1].address, true);
+    await contract.setConsuelor(accounts[2].address, true);
+    await contract.setConsuelor(accounts[3].address, true);
+    await contract.setConsuelor(accounts[4].address, true);
+    
+    // Verificar ordem inicial dos conselheiros
+    const initialLength = 4;
+    for(let i = 0; i < initialLength; i++) {
+        const counselor = await contract.counselors(i);
+        console.log(`Counselor ${i}:`, counselor);
+    }
+    
+    // Remove conselheiro que não é o último (accounts[2])
+    await contract.setConsuelor(accounts[2].address, false);
+    
+    // Verificar nova ordem dos conselheiros
+    const newLength = 3;
+    for(let i = 0; i < newLength; i++) {
+        const counselor = await contract.counselors(i);
+        console.log(`Counselor ${i} after removal:`, counselor);
+    }
+    
+    // Verificar que o conselheiro foi removido
+    const resident = await contract.getResident(accounts[2].address);
+    expect(resident.isCounselor).to.equal(false);
+    
+    // Verificar que o último conselheiro foi movido para a posição do removido
+    const counselorAtRemovedIndex = await contract.counselors(1);
+    expect(counselorAtRemovedIndex).to.equal(accounts[4].address);
+});
 
   it("Should NOT remove Counselor(permission)", async function () {
     const { contract, accounts, manager } = await deployCondominiumFixture();
@@ -268,6 +313,21 @@ describe("Condominium", function () {
 
   it("Should NOT remove Counselor(not found)", async function () {
     const { contract, accounts, manager } = await deployCondominiumFixture();
+
+    await contract.addResident(accounts[1].address, 2102);
+    await contract.setConsuelor(accounts[1].address, true);
+
+    await contract.addResident(accounts[2].address, 2202);
+    await contract.setConsuelor(accounts[2].address, true);
+
+    await contract.addResident(accounts[3].address, 1102);
+
+    await expect(contract.setConsuelor(accounts[3], false)).to.be.rejectedWith("Counselor not found");
+  });
+
+  it("Should NOT remove Counselor(not found - nothing registered)", async function () {
+    const { contract, accounts, manager } = await deployCondominiumFixture();
+
     await expect(contract.setConsuelor(accounts[3], false)).to.be.rejectedWith("Counselor not found");
   });
 
@@ -294,7 +354,7 @@ describe("Condominium", function () {
     ).to.be.rejectedWith("The consuelor must be a resident");
   });
 
-  it("Should change Manager (pure)", async function () {
+  it("Should change Manager (resident)", async function () {
     const { contract, manager, accounts } = await deployCondominiumFixture();
     await addResidents(contract, 15, accounts);
     await contract.addTopic(
@@ -308,6 +368,23 @@ describe("Condominium", function () {
     await addVotes(contract, 15, accounts);
     await contract.closeVoting("topic 1");
     expect(await contract.manager()).to.equal(accounts[7].address);
+  });
+
+  it("Should change Manager (not resident)", async function () {
+    const { contract, manager, accounts } = await deployCondominiumFixture();
+    await addResidents(contract, 15, accounts);
+    const externalAddress = "0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7"
+    await contract.addTopic(
+      "topic 1",
+      "description 1",
+      Category.CHANGE_MANAGER,
+      0,
+      externalAddress
+    );
+    await contract.openVoting("topic 1");
+    await addVotes(contract, 15, accounts);
+    await contract.closeVoting("topic 1");
+    expect(await contract.manager()).to.equal("0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7");
   });
 
   it("Should change Quota", async function () {
@@ -968,6 +1045,36 @@ describe("Condominium", function () {
       "The topic does not exist"
     );
   });
+
+  it("Should pay quota", async function () {
+    const { contract, manager, accounts } = await deployCondominiumFixture();
+  
+    await contract.addResident(accounts[1].address, 1301);
+    const instance = await contract.connect(accounts[1]);
+
+    await instance.payQuota(1301, { value: ethers.parseEther("0.01") });
+
+    const residentBefore = await contract.getResident(accounts[1].address);
+    const initialNextPayment = BigInt(residentBefore.nextPayment);  
+   
+    const thirtyDaysInSeconds = BigInt(30 * 24 * 60 * 60); 
+
+    
+    const thirtyOneDaysInSeconds = BigInt(31 * 24 * 60 * 60); 
+    const newTimestamp = initialNextPayment + thirtyOneDaysInSeconds;
+
+    // After 31 days
+    await time.setNextBlockTimestamp(Number(newTimestamp));  
+    await instance.payQuota(1301, { value: ethers.parseEther("0.01") });
+
+ 
+    const residentAfter = await contract.getResident(accounts[1].address);
+    const expectedNextPayment = initialNextPayment + thirtyDaysInSeconds;
+
+   
+    expect(residentAfter.nextPayment).to.equal(expectedNextPayment);
+});
+
 
   it("Should NOT pay quota (residence not exists)", async function () {
     const { contract, manager, accounts } = await deployCondominiumFixture();

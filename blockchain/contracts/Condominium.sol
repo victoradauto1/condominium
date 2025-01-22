@@ -174,6 +174,7 @@ contract Condominium is ICondominium {
     function _addCounselor(
         address counselor
     ) private onlyManager validAddress(counselor) {
+
         require(isResident(counselor), "The consuelor must be a resident");
         counselors.push(counselor);
         residents[_residentIndex[counselor]].isCounselor = true;
