@@ -9,7 +9,7 @@
     "test": "npx hardhat test",
     "coverage": "npx hardhat coverage",
     "ignition": "npx hardhat ignition deploy ignition/modules/Condominium.ts --network bsctest",
-    "deploy":"npx hardhat run scripts/deploy.ts --network sepolia"
+    "deploy": "npx hardhat run scripts/deploy.ts --network sepolia"
   },
   "keywords": [],
   "author": "",
@@ -26,7 +26,7 @@
     "@types/node": "^22.10.2",
     "chai": "^4.5.0",
     "ethers": "^6.13.4",
-    "hardhat": "^2.22.17",
+    "hardhat": "^2.22.19",
     "hardhat-gas-reporter": "^1.0.10",
     "solidity-coverage": "^0.8.14",
     "ts-node": "^10.9.2",

@@ -190,17 +190,17 @@ contract Condominium is ICondominium {
                 break;
             }
         }
-
+ 
         require(index != 1000000, "Counselor not found");
-
-        if (index != counselors.length - 1) {
+ 
+        if (counselors.length - 1 != index) {
             address latest = counselors[counselors.length - 1];
             counselors[index] = latest;
         }
         counselors.pop();
         residents[_residentIndex[counselor]].isCounselor = false;
     }
-
+   
     function setConsuelor(address resident, bool isEntering) external {
         if (isEntering) {
             _addCounselor(resident);

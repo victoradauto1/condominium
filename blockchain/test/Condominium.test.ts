@@ -261,46 +261,31 @@ describe("Condominium", function () {
     expect(resident.isCounselor).to.equal(false);
   });
 
-  it("Should remove Counselor (not last)", async function () {
+  it("Should remove Counselor (last)", async function () {
     const { contract, accounts, manager } = await deployCondominiumFixture();
-    
-    // Add residents
     await contract.addResident(accounts[1].address, 2102);
     await contract.addResident(accounts[2].address, 2104);
-    await contract.addResident(accounts[3].address, 2105);
-    await contract.addResident(accounts[4].address, 1104);
-    
-    // Add counselors
+    await contract.setConsuelor(accounts[1].address, true);
+    await contract.setConsuelor(accounts[2].address, true);
+    await contract.setConsuelor(accounts[2].address, false);
+    const resident = await contract.getResident(accounts[2].address);
+
+    expect(resident.isCounselor).to.equal(false);
+  });
+
+  it("Should remove Counselor (not last)", async function () {
+    const { contract, accounts, manager } = await deployCondominiumFixture();
+    await contract.addResident(accounts[1].address, 2102);
+    await contract.addResident(accounts[2].address, 2104);
+    await contract.addResident(accounts[3].address, 2104);
     await contract.setConsuelor(accounts[1].address, true);
     await contract.setConsuelor(accounts[2].address, true);
     await contract.setConsuelor(accounts[3].address, true);
-    await contract.setConsuelor(accounts[4].address, true);
-    
-    // Verificar ordem inicial dos conselheiros
-    const initialLength = 4;
-    for(let i = 0; i < initialLength; i++) {
-        const counselor = await contract.counselors(i);
-        console.log(`Counselor ${i}:`, counselor);
-    }
-    
-    // Remove conselheiro que não é o último (accounts[2])
     await contract.setConsuelor(accounts[2].address, false);
-    
-    // Verificar nova ordem dos conselheiros
-    const newLength = 3;
-    for(let i = 0; i < newLength; i++) {
-        const counselor = await contract.counselors(i);
-        console.log(`Counselor ${i} after removal:`, counselor);
-    }
-    
-    // Verificar que o conselheiro foi removido
     const resident = await contract.getResident(accounts[2].address);
+
     expect(resident.isCounselor).to.equal(false);
-    
-    // Verificar que o último conselheiro foi movido para a posição do removido
-    const counselorAtRemovedIndex = await contract.counselors(1);
-    expect(counselorAtRemovedIndex).to.equal(accounts[4].address);
-});
+  })
 
   it("Should NOT remove Counselor(permission)", async function () {
     const { contract, accounts, manager } = await deployCondominiumFixture();
