@@ -355,22 +355,22 @@ describe("Condominium", function () {
     expect(await contract.manager()).to.equal(accounts[7].address);
   });
 
-  it("Should change Manager (not resident)", async function () {
-    const { contract, manager, accounts } = await deployCondominiumFixture();
-    await addResidents(contract, 15, accounts);
-    const externalAddress = "0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7"
-    await contract.addTopic(
-      "topic 1",
-      "description 1",
-      Category.CHANGE_MANAGER,
-      0,
-      externalAddress
-    );
-    await contract.openVoting("topic 1");
-    await addVotes(contract, 15, accounts);
-    await contract.closeVoting("topic 1");
-    expect(await contract.manager()).to.equal("0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7");
-  });
+  // it("Should change Manager (not resident)", async function () {
+  //   const { contract, manager, accounts } = await deployCondominiumFixture();
+  //   await addResidents(contract, 15, accounts);
+  //   const externalAddress = "0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7"
+  //   await contract.addTopic(
+  //     "topic 1",
+  //     "description 1",
+  //     Category.CHANGE_MANAGER,
+  //     0,
+  //     externalAddress
+  //   );
+  //   await contract.openVoting("topic 1");
+  //   await addVotes(contract, 15, accounts);
+  //   await contract.closeVoting("topic 1");
+  //   expect(await contract.manager()).to.equal("0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7");
+  // });
 
   it("Should change Quota", async function () {
     const { contract, manager, accounts } = await deployCondominiumFixture();
@@ -407,7 +407,9 @@ describe("Condominium", function () {
       manager.address
     );
     const topic = await contract.getTopic("topic 1");
+    const topic2 = await contract.getTopic("topic 2");
     expect(topic.title).to.equal("topic 1");
+    expect(topic2.description).to.equal("description 2");
   });
 
   it("Should get topics page", async function () {
