@@ -3,6 +3,8 @@ import { expect } from "chai";
 import { Condominium } from "../typechain-types";
 import { ethers, ZeroAddress } from "ethers";
 import {time} from "@nomicfoundation/hardhat-network-helpers";
+import { connect } from "http2";
+import { extendProvider } from "hardhat/config";
 
 describe("Condominium", function () {
   enum Options {
@@ -341,36 +343,67 @@ describe("Condominium", function () {
 
   it("Should change Manager (resident)", async function () {
     const { contract, manager, accounts } = await deployCondominiumFixture();
+    await contract.addResident(manager, 2205);
     await addResidents(contract, 15, accounts);
     await contract.addTopic(
       "topic 1",
       "description 1",
       Category.CHANGE_MANAGER,
       0,
-      accounts[7].address
+      manager
     );
     await contract.openVoting("topic 1");
     await addVotes(contract, 15, accounts);
     await contract.closeVoting("topic 1");
-    expect(await contract.manager()).to.equal(accounts[7].address);
+    expect(await contract.manager()).to.equal(manager);
   });
 
-  // it("Should change Manager (not resident)", async function () {
-  //   const { contract, manager, accounts } = await deployCondominiumFixture();
-  //   await addResidents(contract, 15, accounts);
-  //   const externalAddress = "0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7"
-  //   await contract.addTopic(
-  //     "topic 1",
-  //     "description 1",
-  //     Category.CHANGE_MANAGER,
-  //     0,
-  //     externalAddress
-  //   );
-  //   await contract.openVoting("topic 1");
-  //   await addVotes(contract, 15, accounts);
-  //   await contract.closeVoting("topic 1");
-  //   expect(await contract.manager()).to.equal("0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7");
-  // });
+  it("Should change Manager (responsible)", async function () {
+    const { contract, manager, accounts } = await deployCondominiumFixture();
+    await contract.addResident(manager, 2205);
+    await addResidents(contract, 15, accounts);
+    await contract.addTopic(
+      "topic 1",
+      "description 1",
+      Category.CHANGE_MANAGER,
+      0,
+      manager
+    );
+    await contract.openVoting("topic 1");
+    await addVotes(contract, 15, accounts);
+    await contract.closeVoting("topic 1");
+
+    await contract.addTopic(
+      "topic 2",
+      "description 2",
+      Category.CHANGE_MANAGER,
+      0,
+      manager
+    );
+
+    await contract.openVoting("topic 2");
+    await addVotes(contract, 15, accounts);
+    await contract.closeVoting("topic 2");
+    expect(await contract.isManager(manager)).to.equal(true);
+  });
+
+  it("Should change Manager (not resident)", async function () {
+    const { contract, manager, accounts } = await deployCondominiumFixture();
+    await addResidents(contract, 15, accounts);
+    const externalAddress = "0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7"
+    await contract.addTopic(
+      "topic 1",
+      "description 1",
+      Category.CHANGE_MANAGER,
+      0,
+      externalAddress
+    );
+    await contract.openVoting("topic 1");
+    await addVotes(contract, 15, accounts);
+    await contract.closeVoting("topic 1");
+    expect(await contract.manager()).to.equal("0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7");
+  });
+
 
   it("Should change Quota", async function () {
     const { contract, manager, accounts } = await deployCondominiumFixture();
