@@ -467,7 +467,7 @@ contract Condominium is ICondominium {
                 }
                 manager = topic.responsible;
 
-                if(isManager(topic.responsible))
+                if(isResident(topic.responsible))
                     residents[_residentIndex[manager]].isManager = true;
             }
         }

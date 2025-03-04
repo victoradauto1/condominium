@@ -1,7 +1,7 @@
 import { SignerWithAddress} from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { Condominium } from "../typechain-types";
-import { ethers, ZeroAddress } from "ethers";
+import { ethers, NonceManager, ZeroAddress } from "ethers";
 import {time} from "@nomicfoundation/hardhat-network-helpers";
 import { connect } from "http2";
 import { extendProvider } from "hardhat/config";
@@ -88,6 +88,20 @@ describe("Condominium", function () {
     for (let i = 1; i <= count; i++) {
       const instance = contract.connect(accounts[i - skip]);
       await instance.vote("topic 1", shouldApproved ? Options.YES : Options.NO);
+    }
+  }
+
+  async function addVotesManager(
+    contract: Condominium,
+    count: number,
+    accounts: SignerWithAddress[],
+    topic: string,
+    shouldApproved: boolean = true
+  ) {
+    const skip = count < 20? 0: 1;
+    for (let i = 1; i <= count; i++) {
+      const instance = contract.connect(accounts[i - skip]);
+      await instance.vote(topic, shouldApproved ? Options.YES : Options.NO);
     }
   }
 
@@ -358,7 +372,7 @@ describe("Condominium", function () {
     expect(await contract.manager()).to.equal(manager);
   });
 
-  it("Should change Manager (responsible)", async function () {
+  it("Should change Manager (resident twice in a row)", async function () {
     const { contract, manager, accounts } = await deployCondominiumFixture();
     await contract.addResident(manager, 2205);
     await addResidents(contract, 15, accounts);
@@ -373,24 +387,39 @@ describe("Condominium", function () {
     await addVotes(contract, 15, accounts);
     await contract.closeVoting("topic 1");
 
+    // Verifica se o primeiro gerente foi corretamente atribuído
+    expect(await contract.manager()).to.equal(manager);
+
+    // Cria um segundo tópico para mudar o gerente para um endereço externo
+    const newManager = "0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7"; // não residente
     await contract.addTopic(
       "topic 2",
       "description 2",
       Category.CHANGE_MANAGER,
       0,
-      manager
+      newManager
     );
 
     await contract.openVoting("topic 2");
-    await addVotes(contract, 15, accounts);
+    await addVotesManager(contract, 15, accounts, "topic 2");
     await contract.closeVoting("topic 2");
-    expect(await contract.isManager(manager)).to.equal(true);
-  });
+    
+    // Verifica se o novo gerente foi corretamente atribuído
+    expect(await contract.manager()).to.equal(newManager);
 
+    // Verifica se o gerente anterior (residente) não é mais gerente
+    const isPreviousManager = await contract.isManager(manager);
+    expect(isPreviousManager).to.equal(false); // o gerente anterior deve ter sido removido
+
+    // Verifica se o novo gerente foi promovido corretamente
+    const isNewManager = await contract.isManager(newManager);
+    expect(isNewManager).to.equal(true); // o novo gerente deve ser promovido
+});
+  
   it("Should change Manager (not resident)", async function () {
     const { contract, manager, accounts } = await deployCondominiumFixture();
     await addResidents(contract, 15, accounts);
-    const externalAddress = "0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7"
+    const externalAddress = "0x6e086E6f338Ed493196326d4Ade46fe02EDAeCB7";
     await contract.addTopic(
       "topic 1",
       "description 1",
